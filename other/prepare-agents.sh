@@ -23,9 +23,9 @@ HOSTS="
 
 SSH_KEY=`sudo cat ~/.ssh/id_rsa.pub`
 
-# ssh -i ~/.ssh/id_rsa_client1 -oStrictHostKeyChecking=no -p$PORT \
-#         ubuntu@$IP "bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
-#                     echo $SSH_KEY | tee -a ~/.ssh/authorized_keys > /dev/null'"
+ssh -i ~/.ssh/id_rsa_client1 -oStrictHostKeyChecking=no -p$PORT \
+        ubuntu@$IP "bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
+                    echo $SSH_KEY | tee -a ~/.ssh/authorized_keys > /dev/null'"
 
 green "\nAdding hosts to /etc/hosts"
 echo -e $HOSTS | ssh -oStrictHostKeyChecking=no -p$PORT ubuntu@$IP "sudo bash -c 'cat | tee /etc/hosts > /dev/null'"
@@ -39,6 +39,11 @@ ssh -oStrictHostKeyChecking=no -p$PORT \
                 sudo service ntp restart && \
                 git clone -b feature/savi https://github.com/etesami/FedScale.git && \
                 cd ~/FedScale && chmod +x ./install.sh && ./install.sh
+                '"
+                
+ssh -oStrictHostKeyChecking=no -p$PORT \
+        ubuntu@$IP "sudo bash -c '
+                cd ~/FedScale && chmod +x ./install-create-env.sh && ./install-create-env.sh
                 '"
 
 
