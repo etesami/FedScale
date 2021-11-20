@@ -9,11 +9,11 @@ export PATH=$install_dir/bin:$PATH
 
 # create conda env
 conda init bash
-echo "source activate fedscale" | tee -a ~/.bashrc
-# . ~/.bashrc
-# conda env create -f environment.yml # Install dependencies
+. ~/.bashrc
+conda env create -f environment.yml # Install dependencies
 # conda activate fedscale
 
+echo "source activate fedscale" | tee -a ~/.bashrc
 
 # un-comment to install cuda
 # wget https://developer.download.nvidia.com/compute/cuda/10.2/Prod/local_installers/cuda_10.2.89_440.33.01_linux.run
