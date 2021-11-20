@@ -10,7 +10,7 @@
 # create conda env
 # conda init bash
 # echo "source activate fedscale" | tee -a ~/.bashrc
-# . ~/.bashrc
+. ~/.bashrc
 conda env create -f environment.yml # Install dependencies
 conda activate fedscale
 
