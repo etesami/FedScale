@@ -27,15 +27,15 @@ SSH_KEY=`sudo cat ~/.ssh/id_rsa.pub`
 #         ubuntu@$IP "bash -c 'mkdir -p ~/.ssh && chmod 700 ~/.ssh && \
 #                     echo $SSH_KEY | tee -a ~/.ssh/authorized_keys > /dev/null'"
 
-green "\nAdding hosts to /etc/hosts"
-echo -e $HOSTS | ssh -oStrictHostKeyChecking=no -p$PORT ubuntu@$IP "sudo bash -c 'cat | tee /etc/hosts > /dev/null'"
+# green "\nAdding hosts to /etc/hosts"
+# echo -e $HOSTS | ssh -oStrictHostKeyChecking=no -p$PORT ubuntu@$IP "sudo bash -c 'cat | tee /etc/hosts > /dev/null'"
 
 green "\nRuuning batch commands and install conda"
 # scp -P$PORT -oStrictHostKeyChecking=no ntp.patch ubuntu@$IP:/tmp
 # scp -P$PORT -oStrictHostKeyChecking=no ~/Anaconda3-2020.11-Linux-x86_64.sh ubuntu@$IP:~
-ssh -oStrictHostKeyChecking=no -p$PORT \
-        ubuntu@$IP "sudo bash -c 'cd ~/FedScale && git reset --hard && git pull
-                '"
+# ssh -oStrictHostKeyChecking=no -p$PORT \
+#         ubuntu@$IP "sudo bash -c 'cd ~/FedScale && git reset --hard && git pull
+#                 '"
 # ssh -oStrictHostKeyChecking=no -p$PORT \
 #         ubuntu@$IP "sudo bash -c 'apt-get update && apt-get install ntp python3-pip -yqq && 
 #                 patch -u /etc/ntp.conf -i /tmp/ntp.patch && \
@@ -43,12 +43,15 @@ ssh -oStrictHostKeyChecking=no -p$PORT \
 #                 git clone -b feature/savi https://github.com/etesami/FedScale.git && \
 #                 cd ~/FedScale && chmod +x ./install.sh && ./install.sh
 #                 '"
-
-green "\nRunning install conda (2)"
 ssh -oStrictHostKeyChecking=no -p$PORT \
-        ubuntu@$IP "sudo bash -c '
-                cd ~/FedScale && chmod +x ./install.sh && ./install.sh
+        ubuntu@$IP "sudo bash -c 'chown -Rf ubuntu:ubuntu /home/ubuntu/*
                 '"
+
+# green "\nRunning install conda (2)"
+# ssh -oStrictHostKeyChecking=no -p$PORT \
+#         ubuntu@$IP "sudo bash -c '
+#                 cd ~/FedScale && chmod +x ./install.sh && ./install.sh
+#                 '"
 
 
 # docker build /home/ubuntu/examples/mnist-pytorch/ -t mnist-client:latest
