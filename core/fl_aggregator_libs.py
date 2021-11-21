@@ -13,7 +13,7 @@ class CustomFormatter(logging.Formatter):
     red = "\033[91m"
     bold_red = "\033[1;91m"
     reset = "\033[0m"
-    format = '%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)d)'
+    format = '%(asctime)s [%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)'
 
     FORMATS = {
         logging.DEBUG: yellow + format + reset,

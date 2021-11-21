@@ -80,7 +80,7 @@ outputClass = {'Mnist': 10, 'cifar10': 10, "imagenet": 1000, 'emnist': 47,'amazo
 def init_model():
     global tokenizer
 
-    logging.info("[L] Initializing the model ...")
+    logging.debug("[L] Initializing the model ...")
 
     if args.task == 'nlp':
         config = AutoConfig.from_pretrained(os.path.join(args.data_dir, args.model_name+'-config.json'))

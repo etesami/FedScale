@@ -49,7 +49,7 @@ class DataPartitioner(object):
 
     def trace_partition(self, data_map_file):
         """Read data mapping from data_map_file. Format: <client_id, sample_name, sample_category, category_id>"""
-        logging.info(f"[D] Partitioning data by profile {data_map_file}...")
+        logging.debug(f"[D] Partitioning data by profile {data_map_file}...")
 
         clientId_maps = {}
         unique_clientIds = {}
@@ -61,7 +61,7 @@ class DataPartitioner(object):
 
             for row in csv_reader:
                 if read_first:
-                    logging.info(f'[D] Trace names are {", ".join(row)}')
+                    logging.debug(f'[D] Trace names are {", ".join(row)}')
                     read_first = False
                 else:
                     client_id = row[0]
@@ -91,7 +91,7 @@ class DataPartitioner(object):
         # random partition
         numOfLabels = self.getNumOfLabels()
         data_len = self.getDataLen()
-        logging.info(f"[D] Randomly partitioning data, {data_len} samples...")
+        logging.debug(f"[D] Randomly partitioning data, {data_len} samples...")
 
         indexes = list(range(data_len))
         self.rng.shuffle(indexes)

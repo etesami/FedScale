@@ -314,7 +314,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
     def event_monitor(self):
         """Activate event handler once receiving new message"""
-        logging.info(f"[{self.this_rank}] Start monitoring events ...")
+        logging.debug(f"[{self.this_rank}] Start monitoring events ...")
 
         while True:
             if self.received_stop_request:

@@ -66,7 +66,8 @@ class ExecutorConnections(object):
 class Aggregator(object):
     """This centralized aggregator collects training/testing feedbacks from executors"""
     def __init__(self, args):
-        logging.debug(f"[A] Job args {args}\n")
+        for ii, jj in vars(args).items():
+            logging.debug(f"[A] --> {ii}: {jj}")
 
         self.args = args
         self.device = args.cuda_device if args.use_cuda else torch.device('cpu')
@@ -437,7 +438,7 @@ class Aggregator(object):
         return conf
 
     def event_monitor(self):
-        logging.info("[A] Start monitoring events ...")
+        logging.debug("[A] Start monitoring events ...")
         start_time = time.time()
         time.sleep(20)
 
