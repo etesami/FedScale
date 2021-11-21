@@ -43,7 +43,7 @@ class ExecutorConnections(object):
 
     def open_grpc_connection(self):
         for executorId in self.executors:
-            logging.info('%%%%%%%%%% Opening grpc connection to ' + self.executors[executorId].address + ' %%%%%%%%%%')
+            logging.info('[A] %%%%%%%%%% Opening grpc connection to ' + self.executors[executorId].address + ' %%%%%%%%%%')
             channel = grpc.insecure_channel(
                 self.executors[executorId].address,
                 options=[
@@ -56,7 +56,7 @@ class ExecutorConnections(object):
 
     def close_grpc_connection(self):
         for executorId in self.executors:
-            logging.info(f'%%%%%%%%%% Closing grpc connection with {executorId} %%%%%%%%%%')
+            logging.info(f'[A] %%%%%%%%%% Closing grpc connection with {executorId} %%%%%%%%%%')
             self.executors[executorId].channel.close()
 
     def get_stub(self, executorId):
@@ -66,7 +66,7 @@ class ExecutorConnections(object):
 class Aggregator(object):
     """This centralized aggregator collects training/testing feedbacks from executors"""
     def __init__(self, args):
-        logging.info(f"Job args {args}")
+        logging.debug(f"[A] Job args {args}\n")
 
         self.args = args
         self.device = args.cuda_device if args.use_cuda else torch.device('cpu')
@@ -131,7 +131,7 @@ class Aggregator(object):
                     self.device = torch.device('cuda:'+str(i))
                     torch.cuda.set_device(i)
                     _ = torch.rand(1).to(device=self.device)
-                    logging.info(f'End up with cuda device ({self.device})')
+                    logging.info(f'[A] End up with cuda device ({self.device})')
                     break
                 except Exception as e:
                     assert i != torch.cuda.device_count()-1, 'Can not find available GPUs'
@@ -151,7 +151,7 @@ class Aggregator(object):
     def init_control_communication(self, ps_ip, ps_port, executors):
         # Create communication channel between aggregator and worker
         # This channel serves control messages
-        logging.info(f"Start to initiate {ps_ip}:{ps_port} for control plane communication ...")
+        logging.info(f"[A] Start to initiate {ps_ip}:{ps_port} for control plane communication ...")
 
         dummy_que = {executorId:Queue() for executorId in executors}
         # create multiple queue for each aggregator_executor pair
@@ -234,7 +234,7 @@ class Aggregator(object):
 
                 clientId += 1
 
-            logging.info("Info of all feasible clients {}".format(self.client_manager.getDataInfo()))
+            logging.info("[A] Info of all feasible clients {}".format(self.client_manager.getDataInfo()))
 
             # start to sample clients
             self.round_completion_handler()
@@ -348,14 +348,20 @@ class Aggregator(object):
                                     success=False)
 
         avg_loss = sum(self.loss_accumulator)/max(1, len(self.loss_accumulator))
-        logging.info(f"Wall clock: {round(self.global_virtual_clock)} s, Epoch: {self.epoch}, Planned participants: " + \
-            f"{len(self.sampled_participants)}, Succeed participants: {len(self.stats_util_accumulator)}, Training loss: {avg_loss}")
+        logging.info(f"[A] Wall clock: {round(self.global_virtual_clock)} s, Epoch: {self.epoch}")
+        
+        logging.info(f"[A] Planned participants: " + \
+            f"{len(self.sampled_participants)}, Succeed participants: {len(self.stats_util_accumulator)}")
+        
+        logging.info(f"[A] Training loss: {avg_loss}")
 
         # update select participants
         self.sampled_participants = self.select_participants(select_num_participants=self.args.total_worker, overcommitment=self.args.overcommitment)
         clientsToRun, round_stragglers, virtual_client_clock, round_duration = self.tictak_client_tasks(self.sampled_participants, self.args.total_worker)
 
-        logging.info(f"Selected participants to run: {clientsToRun}:\n{virtual_client_clock}")
+        logging.info(f"[A] Selected participants to run: {clientsToRun}")
+        for ii, jj in virtual_client_clock.items():
+            logging.debug(f"[A] -> [{ii}]: {jj}")
 
         # Issue requests to the resource manager; Tasks ordered by the completion time
         self.resource_manager.register_tasks(clientsToRun)
@@ -413,7 +419,7 @@ class Aggregator(object):
                     }
 
 
-            logging.info("FL Testing in epoch: {}, virtual_clock: {}, top_1: {} %, top_5: {} %, test loss: {:.4f}, test len: {}"
+            logging.info("[A] FL Testing in epoch: {}, virtual_clock: {}, top_1: {} %, top_5: {} %, test loss: {:.4f}, test len: {}"
                     .format(self.epoch, self.global_virtual_clock, self.testing_history['perf'][self.epoch]['top_1'],
                     self.testing_history['perf'][self.epoch]['top_5'], self.testing_history['perf'][self.epoch]['loss'],
                     self.testing_history['perf'][self.epoch]['test_len']))
@@ -431,7 +437,7 @@ class Aggregator(object):
         return conf
 
     def event_monitor(self):
-        logging.info("Start monitoring events ...")
+        logging.info("[A] Start monitoring events ...")
         start_time = time.time()
         time.sleep(20)
 
@@ -499,7 +505,7 @@ class Aggregator(object):
                 event_msg, executorId, results = event_dict['event'], event_dict['executorId'], event_dict['return']
 
                 if event_msg != 'train_nowait':
-                    logging.info(f"Round {self.epoch}: Receive (Event:{event_msg.upper()}) from (Executor:{executorId})")
+                    logging.info(f"[A] Round {self.epoch}: Receive (Event:{event_msg.upper()}) from (Executor:{executorId})")
 
                 # collect training returns from the executor
                 if event_msg == 'train_nowait':
@@ -529,7 +535,7 @@ class Aggregator(object):
 
 
     def stop(self):
-        logging.info(f"Terminating the aggregator ...")
+        logging.info(f"[A] Terminating the aggregator ...")
         time.sleep(5)
         self.control_manager.shutdown()
 

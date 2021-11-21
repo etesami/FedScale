@@ -6,18 +6,41 @@ import os
 logDir = os.path.join(args.log_path, "logs", args.job_name, args.time_stamp, 'executor')
 logFile = os.path.join(logDir, 'log')
 
+
+class CustomFormatter(logging.Formatter):
+    
+    grey = "\033[37m"
+    bold_yellow = "\033[1;93m"
+    yellow = "\033[93m"
+    red = "\033[91m"
+    bold_red = "\033[1;91m"
+    reset = "\033[0m"
+    format = '%(asctime)s [%(levelname)s] %(message)s (%(filename)s:%(lineno)d)'
+
+    FORMATS = {
+        logging.DEBUG: yellow + format + reset,
+        logging.INFO: grey + format + reset,
+        logging.WARNING: bold_yellow + format + reset,
+        logging.ERROR: red + format + reset,
+        logging.CRITICAL: bold_red + format + reset
+    }
+
+    def format(self, record):
+        log_fmt = self.FORMATS.get(record.levelno)
+        formatter = logging.Formatter(fmt=log_fmt, datefmt='[%m-%d] %H:%M:%S')
+        return formatter.format(record)
+
 def init_logging():
     if not os.path.isdir(logDir):
         os.makedirs(logDir, exist_ok=True)
-
+        
+    sh = logging.StreamHandler()
+    sh.setFormatter(CustomFormatter())
+    fh = logging.FileHandler(logFile, mode='a')
+    fh.setFormatter(CustomFormatter())
     logging.basicConfig(
-                    format='%(asctime)s %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s',
-                    datefmt='(%m-%d) %H:%M:%S',
-                    level=logging.INFO,
-                    handlers=[
-                        logging.FileHandler(logFile, mode='a'),
-                        logging.StreamHandler()
-                    ])
+                    level=logging.DEBUG,
+                    handlers=[fh, sh])
 
 def get_ps_ip():
     global args
@@ -31,7 +54,7 @@ def get_ps_ip():
         ps_ip = pickle.load(fin)
 
     args.ps_ip = ps_ip
-    logging.info('Config ps_ip on {}, args.ps_ip is {}'.format(ps_ip, args.ps_ip))
+    logging.info('[L] Config ps_ip on {}, args.ps_ip is {}'.format(ps_ip, args.ps_ip))
 
 
 def initiate_client_setting():

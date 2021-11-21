@@ -14,7 +14,7 @@ class Client(object):
     def train(self, client_data, model, conf):
 
         clientId = conf.clientId
-        logging.info(f"Start to train (CLIENT: {clientId}) ...")
+        logging.info(f"[C] Start to train (CLIENT: {clientId}) ...")
         tokenizer, device = conf.tokenizer, conf.device
 
         model = model.to(device=device)
@@ -182,9 +182,12 @@ class Client(object):
         results['utility'] = math.sqrt(epoch_train_loss)*float(trained_unique_samples)
 
         if error_type is None:
-            logging.info(f"Training of (CLIENT: {clientId}) completes, {results}")
+            logging.info(f"[C] Training of (CLIENT: {clientId}) completes")
+            for ii, jj in results.items():
+                logging.info(f"[C] --> {ii}: {jj}")
         else:
-            logging.info(f"Training of (CLIENT: {clientId}) failed as {error_type}")
+            logging.info(f"[C] Training of (CLIENT: {clientId}) failed.")
+            logging.error(f"[C] --> {error_type}")
 
         results['update_weight'] = model_param
         results['wall_duration'] = 0

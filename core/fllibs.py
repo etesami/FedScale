@@ -80,7 +80,7 @@ outputClass = {'Mnist': 10, 'cifar10': 10, "imagenet": 1000, 'emnist': 47,'amazo
 def init_model():
     global tokenizer
 
-    logging.info("Initializing the model ...")
+    logging.info("[L] Initializing the model ...")
 
     if args.task == 'nlp':
         config = AutoConfig.from_pretrained(os.path.join(args.data_dir, args.model_name+'-config.json'))
@@ -123,7 +123,7 @@ def init_model():
             model = resnet152(num_classes=outputClass[args.data_set], in_channels=1)
         else:
             # Should not reach here
-            logging.info('Model must be resnet or mobilenet')
+            logging.info('[L] Model must be resnet or mobilenet')
             sys.exit(-1)
 
     elif args.task == 'voice':

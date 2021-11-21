@@ -49,7 +49,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
     def UpdateModel(self, request_iterator, context):
         """A GRPC functionfor JobService invoked by UpdateModel request.
         """
-        logging.info('Received GRPC UpdateModel request')
+        logging.info(f'[{self.this_rank}] Received GRPC UpdateModel request')
         self.update_model_handler(request_iterator)
         return job_api_pb2.UpdateModelResponse()
 
@@ -57,14 +57,14 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
     def Train(self, request, context):
         """A GRPC function for JobService invoked by Train request.
         """
-        logging.info('Received GRPC Train request')
+        logging.info(f'[{self.this_rank}] Received GRPC Train request')
         return job_api_pb2.TrainResponse()
 
 
     def Stop(self, request, context):
         """A GRPC functionfor JobService invoked by Stop request.
         """
-        logging.info('Received GRPC Stop request')
+        logging.info(f'[{self.this_rank}] Received GRPC Stop request')
         self.received_stop_request = True
         return job_api_pb2.StopResponse()
 
@@ -74,7 +74,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
         This is called only once when the training starts.
         """
-        logging.info('Received GRPC ReportExecutorInfo request')
+        logging.info(f'[{self.this_rank}] Received GRPC ReportExecutorInfo request')
         response = job_api_pb2.ReportExecutorInfoResponse()
         response.training_set_size.extend(self.training_sets.getSize()['size'])
         return response
@@ -83,13 +83,13 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
     def Test(self, request, context):
         """A GRPC function for JobService invoked by Test request.
         """
-        logging.info('Received GRPC Test request')
+        logging.info(f'[{self.this_rank}] Received GRPC Test request')
         test_res = self.testing_handler(args=self.args)
         return job_api_pb2.TestResponse(serialized_test_response=pickle.dumps(test_res))
 
 
     def setup_env(self):
-        logging.info(f"(EXECUTOR:{self.this_rank}) is setting up environ ...")
+        logging.info(f"[{self.this_rank}] (EXECUTOR:{self.this_rank}) is setting up environ ...")
 
         self.setup_seed(seed=self.this_rank)
 
@@ -101,7 +101,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                         self.device = torch.device('cuda:'+str(i))
                         torch.cuda.set_device(i)
                         print(torch.rand(1).to(device=self.device))
-                        logging.info(f'End up with cuda device ({self.device})')
+                        logging.info(f'[{self.this_rank}] End up with cuda device ({self.device})')
                         break
                     except Exception as e:
                         assert i != torch.cuda.device_count()-1, 'Can not find available GPUs'
@@ -126,7 +126,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         # Create communication channel between aggregator and worker
         # This channel serves control messages
 
-        logging.info(f"Start to connect to {ps_ip}:{ps_port} for control plane communication ...")
+        logging.info(f"[{self.this_rank}] Start to connect to {ps_ip}:{ps_port} for control plane communication ...")
 
         self.grpc_server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=30),
@@ -139,7 +139,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         port = '[::]:{}'.format(50000 + self.this_rank)
         self.grpc_server.add_insecure_port(port)
         self.grpc_server.start()
-        logging.info(f'Started GRPC server at {port}')
+        logging.info(f'[{self.this_rank}] Started GRPC server at {port}')
 
         BaseManager.register('get_server_event_que'+str(self.this_rank))
         BaseManager.register('get_client_event')
@@ -153,11 +153,11 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                 is_connected = True
             except Exception as e:
                 time.sleep(numpy.random.rand(1)[0]*5+0.1)
-                logging.info(f"Retrying connection to {ps_ip}:{ps_port}")
+                logging.info(f"[{self.this_rank}] Retrying connection to {ps_ip}:{ps_port}")
                 pass
 
         assert is_connected, 'Failed to connect to the aggregator'
-        logging.info("Successfully connect to the aggregator")
+        logging.info(f"[{self.this_rank}] Successfully connect to the aggregator")
 
         self.server_event_queue = eval('self.control_manager.get_server_event_que'+str(self.this_rank)+'()')
         self.client_event_queue = self.control_manager.get_client_event()
@@ -177,7 +177,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         if self.task == "rl":
             return train_dataset, test_dataset
         # load data partitioner (entire_train_data)
-        logging.info("Data partitioner starts ...")
+        logging.info(f"[{self.this_rank}] Data partitioner starts ...")
 
         training_sets = DataPartitioner(data=train_dataset, numOfClass=self.args.num_class)
         training_sets.partition_data_helper(num_clients=self.args.total_worker, data_map_file=self.args.data_map_file)
@@ -185,7 +185,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         testing_sets = DataPartitioner(data=test_dataset, numOfClass=self.args.num_class, isTest=True)
         testing_sets.partition_data_helper(num_clients=self.num_executors)
 
-        logging.info("Data partitioner completes ...")
+        logging.info(f"[{self.this_rank}] Data partitioner completes ...")
 
 
         if self.task == 'nlp':
@@ -237,12 +237,12 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
     def load_global_model(self):
         # load last global model
-        try:
-            with open(self.temp_model_path, 'rb') as model_in:
-                model = pickle.load(model_in)
-                return model
-        except OSError as e:
-            return self.model
+        # try:
+        with open(self.temp_model_path, 'rb') as model_in:
+            model = pickle.load(model_in)
+            return model
+        # except OSError as e:
+        #     return self.model
 
 
     def override_conf(self, config):
@@ -304,8 +304,8 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             test_res = test_model(self.this_rank, self.model, data_loader, device=device, criterion=criterion, tokenizer=tokenizer)
 
             test_loss, acc, acc_5, testResults = test_res
-            logging.info("After aggregation epoch {}, CumulTime {}, eval_time {}, test_loss {}, test_accuracy {:.2f}%, test_5_accuracy {:.2f}% \n"
-                        .format(self.epoch, round(time.time() - self.start_run_time, 4), round(time.time() - evalStart, 4), test_loss, acc*100., acc_5*100.))
+            logging.info("[{}] After aggregation epoch {}, CumulTime {}, eval_time {}, test_loss {}, test_accuracy {:.2f}%, test_5_accuracy {:.2f}% \n"
+                        .format(self.this_rank, self.epoch, round(time.time() - self.start_run_time, 4), round(time.time() - evalStart, 4), test_loss, acc*100., acc_5*100.))
 
         gc.collect()
 
@@ -314,11 +314,11 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
     def event_monitor(self):
         """Activate event handler once receiving new message"""
-        logging.info("Start monitoring events ...")
+        logging.info(f"[{self.this_rank}] Start monitoring events ...")
 
         while True:
             if self.received_stop_request:
-                logging.info(f"Terminating (Executor {self.this_rank}) ...")
+                logging.info(f"[{self.this_rank}] Terminating (Executor {self.this_rank}) ...")
                 self.grpc_server.stop(0)
                 break
 
@@ -326,7 +326,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                 event_dict = self.server_event_queue.get()
                 event_msg = event_dict['event']
 
-                logging.info(f"Executor {self.this_rank}: Received (Event:{event_msg.upper()}) from aggregator")
+                logging.info(f"[{self.this_rank}] Executor {self.this_rank}: Received (Event:{event_msg.upper()}) from aggregator")
 
                 # initiate each training round
                 if event_msg == 'train':
@@ -344,7 +344,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
 
     def stop(self):
-        logging.info(f"Terminating (Executor {self.this_rank}) ...")
+        logging.info(f"[{self.this_rank}] Terminating (Executor {self.this_rank}) ...")
 
 
 if __name__ == "__main__":
