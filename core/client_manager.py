@@ -58,6 +58,7 @@ class clientManager(object):
     def getClient(self, clientId):
         return self.Clients[self.getUniqueId(0, clientId)]
 
+    # upload_epoch = local_steps
     def registerDuration(self, clientId, batch_size, upload_epoch, upload_size, download_size):
         if self.mode == "oort":
             exe_cost = self.Clients[self.getUniqueId(0, clientId)].getCompletionTime(
@@ -180,6 +181,7 @@ class clientManager(object):
         else:
             self.rng.shuffle(clients_online)
             client_len = min(numOfClients, len(clients_online) -1)
+            logging.debug(f'[C] --> Total number of selected clients: {client_len}')
             pickled_clients = clients_online[:client_len]
 
         return pickled_clients

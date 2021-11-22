@@ -43,7 +43,7 @@ class ExecutorConnections(object):
 
     def open_grpc_connection(self):
         for executorId in self.executors:
-            logging.info('[A] %%%%%%%%%% Opening grpc connection to ' + self.executors[executorId].address + ' %%%%%%%%%%')
+            logging.debug('[A] -- Opening grpc connection to ' + self.executors[executorId].address + ' --')
             channel = grpc.insecure_channel(
                 self.executors[executorId].address,
                 options=[
@@ -56,7 +56,7 @@ class ExecutorConnections(object):
 
     def close_grpc_connection(self):
         for executorId in self.executors:
-            logging.info(f'[A] %%%%%%%%%% Closing grpc connection with {executorId} %%%%%%%%%%')
+            logging.debug(f'[A] -- Closing grpc connection with {executorId} --')
             self.executors[executorId].channel.close()
 
     def get_stub(self, executorId):
@@ -218,6 +218,8 @@ class Aggregator(object):
 
         # have collected all executors
         # In this simulation, we run data split on each worker, so collecting info from one executor is enough
+        # If distribution of data on clients differ from each other, it is required to change the code below
+        # to handle all client's information stored on all clients.
         # Waiting for data information from executors, or timeout
 
         if self.registered_executor_info == len(self.executors):
@@ -349,7 +351,7 @@ class Aggregator(object):
                                     success=False)
 
         avg_loss = sum(self.loss_accumulator)/max(1, len(self.loss_accumulator))
-        logging.info(f"[A] Wall clock: {round(self.global_virtual_clock)} s, Epoch: {self.epoch}")
+        logging.info(f"[A] {CYAN_BOLD}Wall clock: {round(self.global_virtual_clock)} s, Epoch: {self.epoch}{RESET}")
         
         logging.info(f"[A] Planned participants: " + \
             f"{len(self.sampled_participants)}, Succeed participants: {len(self.stats_util_accumulator)}")
@@ -362,7 +364,7 @@ class Aggregator(object):
 
         logging.info(f"[A] Selected participants to run: {clientsToRun}")
         for ii, jj in virtual_client_clock.items():
-            logging.debug(f"[A] -> [{ii}]: {jj}")
+            logging.debug(f"[A] -> [{ii:<5}]: {jj}")
 
         # Issue requests to the resource manager; Tasks ordered by the completion time
         self.resource_manager.register_tasks(clientsToRun)
@@ -440,18 +442,23 @@ class Aggregator(object):
     def event_monitor(self):
         logging.debug("[A] Start monitoring events ...")
         start_time = time.time()
-        time.sleep(20)
+        SLEEP_TIME = 15
+        logging.debug(f"{RED_BOLD}[A] Sleeps for {SLEEP_TIME} secs ...{RESET}")
+        time.sleep(SLEEP_TIME)
 
         while time.time() - start_time < 120:
             try:
                 self.executors.open_grpc_connection()
                 for executorId in self.executors:
                     response = self.executors.get_stub(executorId).ReportExecutorInfo(
-                        job_api_pb2.ReportExecutorInfoRequest())
+                        job_api_pb2.ReportExecutorInfoRequest())                    
                     self.executor_info_handler(executorId, {"size": response.training_set_size})
                 break
                 
-            except:
+            except Exception as e:
+                logging.error("[A] Execption in receiving ReportExecutorInfoRequest")
+                logging.error("[A] {}".format(e))
+                logging.debug(f"{RED_BOLD}[A] Sleep for 15 secs and try again ...{RESET}")
                 self.executors.close_grpc_connection()
                 time.sleep(15)
 
@@ -506,7 +513,7 @@ class Aggregator(object):
                 event_msg, executorId, results = event_dict['event'], event_dict['executorId'], event_dict['return']
 
                 if event_msg != 'train_nowait':
-                    logging.info(f"[A] Round {self.epoch}: Receive (Event:{event_msg.upper()}) from (Executor:{executorId})")
+                    logging.info(f"[A] Round {self.epoch}: Receive (Event:{event_msg.upper()}) from {YELLOW_BOLD}(Executor:{executorId}){RESET}")
 
                 # collect training returns from the executor
                 if event_msg == 'train_nowait':

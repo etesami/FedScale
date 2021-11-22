@@ -72,6 +72,9 @@ from optimizer import ServerOptimizer
 os.environ['MASTER_ADDR'] = args.ps_ip
 os.environ['MASTER_PORT'] = args.ps_port
 
+YELLOW_BOLD = "\033[1;93m"
+CYAN_BOLD = "\033[1;36m"
+RESET = "\033[0m"
 
 outputClass = {'Mnist': 10, 'cifar10': 10, "imagenet": 1000, 'emnist': 47,'amazon':5,
                 'openImg': 596, 'google_speech': 35, 'femnist': 62, 'yelp': 5, 'inaturalist' : 1010

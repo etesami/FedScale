@@ -33,8 +33,8 @@ parser.add_argument('--device_conf_file', type=str, default='/tmp/client.cfg')
 parser.add_argument('--model', type=str, default='shufflenet_v2_x2_0')
 parser.add_argument('--data_set', type=str, default='cifar10')
 parser.add_argument('--sample_mode', type=str, default='random')
-parser.add_argument('--filter_less', type=int, default=32)
-parser.add_argument('--filter_more', type=int, default=1e15)
+parser.add_argument('--filter_less', type=int, default=32) # Minimum number of samples per client
+parser.add_argument('--filter_more', type=int, default=1e15) # Maximum number of samples per client
 parser.add_argument('--train_uniform', type=bool, default=False)
 parser.add_argument('--conf_path', type=str, default='~/dataset/')
 parser.add_argument('--overcommitment', type=float, default=1.3)

@@ -5,6 +5,11 @@ from utils.nlp import mask_tokens
 from torch.autograd import Variable
 from optimizer import ClientOptimizer
 
+
+YELLOW_BOLD = "\033[1;93m"
+CYAN_BOLD = "\033[1;36m"
+RESET = "\033[0m"
+
 class Client(object):
     """Basic client component in Federated Learning"""
     def __init__(self, conf):
@@ -14,7 +19,7 @@ class Client(object):
     def train(self, client_data, model, conf):
 
         clientId = conf.clientId
-        logging.info(f"[C] [{clientId:<4}]: Start to train (CLIENT: {clientId}) ...")
+        logging.info(f"[C] [{clientId:<4}]: Start to train {CYAN_BOLD}(CLIENT: {clientId}){RESET} ...")
         tokenizer, device = conf.tokenizer, conf.device
 
         model = model.to(device=device)
@@ -182,11 +187,11 @@ class Client(object):
         results['utility'] = math.sqrt(epoch_train_loss)*float(trained_unique_samples)
 
         if error_type is None:
-            logging.info(f"[C] [{clientId:<4}]: Training of (CLIENT: {clientId}) completes")
+            logging.info(f"[C] [{clientId:<4}]: Training of {CYAN_BOLD}(CLIENT: {clientId}){RESET} completes")
             for ii, jj in results.items():
                 logging.info(f"[C] [{clientId:<4}]: --> {ii}: {jj}")
         else:
-            logging.info(f"[C] [{clientId:<4}]: Training of (CLIENT: {clientId}) failed.")
+            logging.info(f"[C] [{clientId:<4}]: Training of {CYAN_BOLD}(CLIENT: {clientId}){RESET} failed.")
             logging.error(f"[C] [{clientId:<4}]: --> {error_type}")
 
         results['update_weight'] = model_param

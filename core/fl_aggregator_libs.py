@@ -4,10 +4,15 @@ from fllibs import *
 logDir = os.path.join(args.log_path, "logs", args.job_name, args.time_stamp, 'aggregator')
 logFile = os.path.join(logDir, 'log')
 
+YELLOW_BOLD = "\033[1;93m"
+CYAN_BOLD = "\033[1;36m"
+RED_BOLD = "\033[1;91m"
+RESET = "\033[0m"
 
 class CustomFormatter(logging.Formatter):
     
-    grey = "\033[37m"
+    grey = "\033[1;37m"
+    light_blue = "\033[34m"
     bold_yellow = "\033[1;93m"
     yellow = "\033[93m"
     red = "\033[91m"
@@ -16,7 +21,7 @@ class CustomFormatter(logging.Formatter):
     format = '%(asctime)s [%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)'
 
     FORMATS = {
-        logging.DEBUG: yellow + format + reset,
+        logging.DEBUG: light_blue + format + reset,
         logging.INFO: grey + format + reset,
         logging.WARNING: bold_yellow + format + reset,
         logging.ERROR: red + format + reset,

@@ -38,7 +38,10 @@ class Client(object):
                                 backward-pass takes around 2x the latency, so we multiple it by 3x;
            Communication latency: communication latency = (pull + push)_update_size/bandwidth;
         """
-        #return (3.0 * batch_size * upload_epoch/float(self.compute_speed) + model_size/float(self.bandwidth))
+        # return (3.0 * batch_size * upload_epoch/float(self.compute_speed) + model_size/float(self.bandwidth))
+        # default value of compute_speed and bandwidth (communication_speed): {'computation': 1.0, 'communication':1.0}
+        # upload_epoch (local_steps) = 20
+        # batch_size = 20
         return {'computation':augmentation_factor * batch_size * upload_epoch*float(self.compute_speed)/1000., \
                 'communication': (upload_size+download_size)/float(self.bandwidth)}
         # return (augmentation_factor * batch_size * upload_epoch*float(self.compute_speed)/1000. + \

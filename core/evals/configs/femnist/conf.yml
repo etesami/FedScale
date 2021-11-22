@@ -64,9 +64,9 @@ job_conf:
     - data_set: femnist
     - data_dir: $HOME/FedScale/dataset/data/femnist
     - data_map_file: $HOME/FedScale/dataset/data/femnist/client_data_mapping/train.csv
-    - gradient_policy: yogi
+    # - gradient_policy: yogi
     - eval_interval: 30
-    - epochs: 2
+    - epochs: 50
     - filter_less: 21
     - num_loaders: 1
     - yogi_eta: 3e-3 
