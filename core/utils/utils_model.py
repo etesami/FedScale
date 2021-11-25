@@ -2,12 +2,6 @@
 
 import math
 import random
-
-YELLOW_BOLD = "\033[1;93m"
-CYAN_BOLD = "\033[1;36m"
-RED_BOLD = "\033[1;91m"
-RESET = "\033[0m"
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,6 +10,11 @@ import numpy as np
 import logging
 from argParser import args
 from utils.nlp import mask_tokens
+
+YELLOW_BOLD = "\033[1;93m"
+CYAN_BOLD = "\033[1;36m"
+RED_BOLD = "\033[1;91m"
+RESET = "\033[0m"
 
 if args.task == "detection":
     import os
