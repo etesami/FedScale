@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from fl_client_libs import *
 from argparse import Namespace
+from utils.leaf_femnist import LEAF_FEMNIST
 import gc
 from client import Client
 from rlclient import RLClient
@@ -76,7 +77,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         """
         logging.debug(f'[{self.this_rank}] Received GRPC ReportExecutorInfo request')
         response = job_api_pb2.ReportExecutorInfoResponse()
-        response.training_set_size.extend(self.training_sets.getSize()['size'])
+        response.training_set_size.extend()
         return response
 
 
@@ -196,13 +197,37 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             self.collate_fn = voice_collate_fn
 
         return training_sets, testing_sets
+    
+    def init_data_leaf(self):
+        """Return the training and testing dataset"""
+        train_dataset, test_dataset = init_dataset()
+        if self.task == "rl":
+            return train_dataset, test_dataset
+        # load data partitioner (entire_train_data)
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner starts ...")
+
+        training_sets = DataPartitionerLeaf()
+        training_sets.trace_partition_leaf(self.args.data_map_file)
+
+        testing_sets = DataPartitioner(data=test_dataset, numOfClass=self.args.num_class, isTest=True)
+        testing_sets.partition_data_helper(num_clients=self.num_executors)
+
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner completes ...")
+
+
+        if self.task == 'nlp':
+            self.collate_fn = collate
+        elif self.task == 'voice':
+            self.collate_fn = voice_collate_fn
+
+        return training_sets, testing_sets
 
 
     def run(self):
         self.setup_env()
         self.model = self.init_model()
         self.model = self.model.to(device=self.device)
-        self.training_sets, self.testing_sets = self.init_data()
+        # self.training_sets, self.testing_sets = self.init_data()
         self.setup_communication()
         self.event_monitor()
 
@@ -274,6 +299,17 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
         conf.clientId, conf.device = clientId, self.device
         conf.tokenizer = tokenizer
+        
+
+        train_transform, test_transform = get_data_transform('mnist')
+        
+        with open(args.data_map_file, 'r') as ff:
+            for ll in ff.readlines():
+                if 
+        self.train_dataset = LEAF_FEMNIST(args.data_dir, dataset='train', transform=train_transform)
+        self.test_dataset = LEAF_FEMNIST(args.data_dir, dataset='test', transform=test_transform)
+        
+        
         if args.task == "rl":
             client_data = self.training_sets
             client = RLClient(conf)

@@ -35,9 +35,7 @@ message StopResponse {}
 
 message ReportExecutorInfoRequest {}
 
-message ReportExecutorInfoResponse {
-    repeated int64 training_set_size = 1;
-}
+message ReportExecutorInfoResponse {}
 
 message TestRequest {
     string message = 1;

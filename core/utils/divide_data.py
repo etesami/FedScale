@@ -116,6 +116,47 @@ class DataPartitioner(object):
         return {'size': [len(partition) for partition in self.partitions]}
 
 
+class DataPartitionerLeaf(object):
+    """Partition data by trace or random"""
+
+    def __init__(self, seed=10, isTest=False):
+        self.partitions = []
+        self.rng = Random()
+        self.rng.seed(seed)
+
+        self.args = args
+        self.isTest = isTest
+        np.random.seed(seed)
+
+    def trace_partition_leaf(self, data_map_file):
+        """Read data mapping from data_map_file. Format: <client_id, num_samples, related_file>"""
+        logging.debug(f"[D] Partitioning data by profile {data_map_file}...")
+
+        clientId_maps = {}
+        unique_clientIds = {}
+        # load meta data from the data_map_file
+        with open(data_map_file) as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            read_first = False
+            sample_id = 0
+
+            for row in csv_reader:
+                if read_first:
+                    logging.debug(f'[D] Trace names are {", ".join(row)}')
+                    read_first = False
+                else:
+                    client_id = row[0]
+
+                    if client_id not in unique_clientIds:
+                        unique_clientIds[client_id] = len(unique_clientIds)
+
+                    clientId_maps[sample_id] = unique_clientIds[client_id]
+                    sample_id += 1
+
+        # Partition data given mapping
+        self.partitions = [[] for _ in range(len(unique_clientIds))]
+
+
 def select_dataset(rank, partition, batch_size, isTest=False, collate_fn=None):
     """Load data given client Id"""
     partition = partition.use(rank - 1, isTest)

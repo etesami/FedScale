@@ -214,7 +214,7 @@ class Aggregator(object):
 
         return global_client_profile
 
-    def executor_info_handler(self, executorId, info):
+    def executor_info_handler(self, executorId):
 
         self.registered_executor_info += 1
 
@@ -228,10 +228,16 @@ class Aggregator(object):
 
             clientId = 1
 
-            for index, _size in enumerate(info['size']):
+            with open(self.args.data_map_file, 'r') as ff:
+                for ll in ff.readlines():
+                    words = ll.split(',')
+                    mapped_id, clientId, client_train_size, client_source_file = words[0], words[1], words[2], words[3]
+                    self.client_manager.registerClient(clientId, client_train_size, client_source_file)
+            
+            # for index, _size in enumerate(info['size']):
                 # since the worker rankId starts from 1, we also configure the initial dataId as 1
                 mapped_id = clientId%len(self.client_profiles) if len(self.client_profiles) > 0 else 1
-                systemProfile = self.client_profiles.get(mapped_id, {'computation': 1.0, 'communication':1.0})
+                # systemProfile = self.client_profiles.get(mapped_id, {'computation': 1.0, 'communication':1.0})
 
                 self.client_manager.registerClient(executorId, clientId, size=_size, speed=systemProfile)
                 self.client_manager.registerDuration(clientId, batch_size=self.args.batch_size,
@@ -473,7 +479,7 @@ class Aggregator(object):
                 for executorId in self.executors:
                     response = self.executors.get_stub(executorId).ReportExecutorInfo(
                         job_api_pb2.ReportExecutorInfoRequest())                    
-                    self.executor_info_handler(executorId, {"size": response.training_set_size})
+                    self.executor_info_handler(executorId)
                 break
                 
             except Exception as e:
