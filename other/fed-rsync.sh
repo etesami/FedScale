@@ -17,7 +17,8 @@ if [[ ${args[--core]} == 'true' ]]; then
         (rsync -ar \
             --exclude=*logs --exclude=*logging --exclude=*.pyc --exclude=*.pyx --exclude=__pycache__ --exclude=dataset \
             --delete --info=progress2 ~/FedScale/ ${AGENT}:~/FedScale &)
-        (rsync -ar --info=progress2 ~/anaconda3/envs/fedscale/lib/python3.6/site-packages/PIL/ \
+        (rsync -ar --info=progress2 --exclude=*.pyc --exclude=*.so --exclude=*.pyx --exclude=__pycache__ \
+             ~/anaconda3/envs/fedscale/lib/python3.6/site-packages/PIL/ \
             ${AGENT}:~/anaconda3/envs/fedscale/lib/python3.6/site-packages/PIL &)
     done
 elif [[ ${args[--data]} == 'true' ]]; then

@@ -19,7 +19,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   syntax='proto3',
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_pb=b'\n\rjob_api.proto\x12\x08\x66\x65\x64scale\"/\n\x12UpdateModelRequest\x12\x19\n\x11serialized_tensor\x18\x01 \x01(\x0c\"&\n\x13UpdateModelResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\"B\n\x0cTrainRequest\x12\x11\n\tclient_id\x18\x01 \x01(\x04\x12\x1f\n\x17serialized_train_config\x18\x02 \x01(\x0c\"\x0f\n\rTrainResponse\"\r\n\x0bStopRequest\"\x0e\n\x0cStopResponse\"\x1b\n\x19ReportExecutorInfoRequest\"7\n\x1aReportExecutorInfoResponse\x12\x19\n\x11training_set_size\x18\x01 \x03(\x03\"\x1e\n\x0bTestRequest\x12\x0f\n\x07message\x18\x01 \x01(\t\"0\n\x0cTestResponse\x12 \n\x18serialized_test_response\x18\x01 \x01(\x0c\x32\xec\x02\n\nJobService\x12N\n\x0bUpdateModel\x12\x1c.fedscale.UpdateModelRequest\x1a\x1d.fedscale.UpdateModelResponse\"\x00(\x01\x12\x39\n\x05Train\x12\x16.fedscale.TrainRequest\x1a\x16.fedscale.TrainRequest\"\x00\x12\x37\n\x04Stop\x12\x15.fedscale.StopRequest\x1a\x16.fedscale.StopResponse\"\x00\x12\x61\n\x12ReportExecutorInfo\x12#.fedscale.ReportExecutorInfoRequest\x1a$.fedscale.ReportExecutorInfoResponse\"\x00\x12\x37\n\x04Test\x12\x15.fedscale.TestRequest\x1a\x16.fedscale.TestResponse\"\x00\x62\x06proto3'
+  serialized_pb=b'\n\rjob_api.proto\x12\x08\x66\x65\x64scale\"/\n\x12UpdateModelRequest\x12\x19\n\x11serialized_tensor\x18\x01 \x01(\x0c\"&\n\x13UpdateModelResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\"B\n\x0cTrainRequest\x12\x11\n\tclient_id\x18\x01 \x01(\x04\x12\x1f\n\x17serialized_train_config\x18\x02 \x01(\x0c\"\x0f\n\rTrainResponse\"\r\n\x0bStopRequest\"\x0e\n\x0cStopResponse\"\x1b\n\x19ReportExecutorInfoRequest\"7\n\x1aReportExecutorInfoResponse\x12\x19\n\x11training_set_size\x18\x01 \x03(\x03\"\x1e\n\x0bTestRequest\x12\x0f\n\x07message\x18\x01 \x01(\t\"\x0e\n\x0cTestResponse2\xec\x02\n\nJobService\x12N\n\x0bUpdateModel\x12\x1c.fedscale.UpdateModelRequest\x1a\x1d.fedscale.UpdateModelResponse\"\x00(\x01\x12\x39\n\x05Train\x12\x16.fedscale.TrainRequest\x1a\x16.fedscale.TrainRequest\"\x00\x12\x37\n\x04Stop\x12\x15.fedscale.StopRequest\x1a\x16.fedscale.StopResponse\"\x00\x12\x61\n\x12ReportExecutorInfo\x12#.fedscale.ReportExecutorInfoRequest\x1a$.fedscale.ReportExecutorInfoResponse\"\x00\x12\x37\n\x04Test\x12\x15.fedscale.TestRequest\x1a\x16.fedscale.TestResponse\"\x00\x62\x06proto3'
 )
 
 
@@ -300,13 +300,6 @@ _TESTRESPONSE = _descriptor.Descriptor(
   containing_type=None,
   create_key=_descriptor._internal_create_key,
   fields=[
-    _descriptor.FieldDescriptor(
-      name='serialized_test_response', full_name='fedscale.TestResponse.serialized_test_response', index=0,
-      number=1, type=12, cpp_type=9, label=1,
-      has_default_value=False, default_value=b"",
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      serialized_options=None, file=DESCRIPTOR,  create_key=_descriptor._internal_create_key),
   ],
   extensions=[
   ],
@@ -320,7 +313,7 @@ _TESTRESPONSE = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=350,
-  serialized_end=398,
+  serialized_end=364,
 )
 
 DESCRIPTOR.message_types_by_name['UpdateModelRequest'] = _UPDATEMODELREQUEST
@@ -414,8 +407,8 @@ _JOBSERVICE = _descriptor.ServiceDescriptor(
   index=0,
   serialized_options=None,
   create_key=_descriptor._internal_create_key,
-  serialized_start=401,
-  serialized_end=765,
+  serialized_start=367,
+  serialized_end=731,
   methods=[
   _descriptor.MethodDescriptor(
     name='UpdateModel',

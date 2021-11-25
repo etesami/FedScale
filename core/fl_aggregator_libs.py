@@ -4,11 +4,6 @@ from fllibs import *
 logDir = os.path.join(args.log_path, "logs", args.job_name, args.time_stamp, 'aggregator')
 logFile = os.path.join(logDir, 'log')
 
-YELLOW_BOLD = "\033[1;93m"
-CYAN_BOLD = "\033[1;36m"
-RED_BOLD = "\033[1;91m"
-RESET = "\033[0m"
-
 class CustomFormatter(logging.Formatter):
     
     grey = "\033[1;37m"
@@ -18,7 +13,8 @@ class CustomFormatter(logging.Formatter):
     red = "\033[91m"
     bold_red = "\033[1;91m"
     reset = "\033[0m"
-    format = '%(asctime)s [%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)'
+    format = '%(asctime)s [%(levelname)-5s] %(message)s'
+    # format = '%(asctime)s [%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)'
 
     FORMATS = {
         logging.DEBUG: light_blue + format + reset,
@@ -42,7 +38,7 @@ def init_logging():
     fh = logging.FileHandler(logFile, mode='a')
     fh.setFormatter(CustomFormatter())
     logging.basicConfig(
-                    level=logging.DEBUG,
+                    level=args.logging_level,
                     handlers=[fh, sh])
 
 def dump_ps_ip():

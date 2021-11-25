@@ -6,9 +6,6 @@ import os
 logDir = os.path.join(args.log_path, "logs", args.job_name, args.time_stamp, 'executor')
 logFile = os.path.join(logDir, 'log')
 
-YELLOW_BOLD = "\033[1;93m"
-CYAN_BOLD = "\033[1;36m"
-RESET = "\033[0m"
 
 class CustomFormatter(logging.Formatter):
     
@@ -19,7 +16,8 @@ class CustomFormatter(logging.Formatter):
     red = "\033[91m"
     bold_red = "\033[1;91m"
     reset = "\033[0m"
-    format = '%(asctime)s [%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)'
+    format = '%(asctime)s [%(levelname)-5s] %(message)s'
+    # format = '%(asctime)s [%(levelname)-5s] %(message)s (%(filename)s:%(lineno)d)'
 
     FORMATS = {
         logging.DEBUG: light_blue + format + reset,
@@ -43,7 +41,7 @@ def init_logging():
     fh = logging.FileHandler(logFile, mode='a')
     fh.setFormatter(CustomFormatter())
     logging.basicConfig(
-                    level=logging.INFO,
+                    level=args.logging_level,
                     handlers=[fh, sh])
 
 def get_ps_ip():

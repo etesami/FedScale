@@ -74,12 +74,14 @@ def process_cmd(yaml_file):
     time.sleep(3)
     # =========== Submit job to each worker ============
     rank_id = 1
+    print(f'Total CPU/GPU for this run: {total_gpus}')
+    print(f'Num of executors (total_gpu_processes): {total_gpu_processes}')
     for worker, gpu in zip(worker_ips, total_gpus):
         running_vms.add(worker)
-        print(f"Starting workers on {worker} ...")
 
         for cuda_id in range(len(gpu)):
             for _  in range(gpu[cuda_id]):
+                print(f"Starting workers on {worker} with Rank [{rank_id}] ...")
                 worker_cmd = f" python {yaml_conf['exp_path']}/{yaml_conf['executor_entry']} {conf_script} --this_rank={rank_id} --num_executors={total_gpu_processes} --cuda_device=cuda:{cuda_id} "
                 rank_id += 1
 

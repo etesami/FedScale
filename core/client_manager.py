@@ -157,7 +157,7 @@ class clientManager(object):
         else:
             clients_online = [clientId for clientId in self.feasibleClients if self.Clients[self.getUniqueId(0, clientId)].isActive(cur_time)]
 
-        logging.info(f"[C] Wall clock time: {round(cur_time)}, {len(clients_online)} clients online, " + \
+        logging.debug(f"[C] Wall clock time: {round(cur_time)}, {len(clients_online)} clients online, " + \
                     f"{len(self.feasibleClients)-len(clients_online)} clients offline")
 
         return clients_online

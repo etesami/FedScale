@@ -43,6 +43,8 @@ message TestRequest {
     string message = 1;
 }
 
-message TestResponse {
-    bytes serialized_test_response = 1;
-}
+message TestResponse {}
+
+// message TestResponse {
+//     bytes serialized_test_response = 1;
+// }

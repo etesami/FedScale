@@ -83,13 +83,15 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
     def Test(self, request, context):
         """A GRPC function for JobService invoked by Test request.
         """
-        logging.debug(f'{YELLOW_BOLD}[{self.this_rank}]{RESET} Received GRPC Test request')
-        test_res = self.testing_handler(args=self.args)
-        return job_api_pb2.TestResponse(serialized_test_response=pickle.dumps(test_res))
+        logging.debug(f'[{self.this_rank}] Received GRPC Test request')
+        return job_api_pb2.TestResponse()
+        # test_res = self.testing_handler(args=self.args)
+        # self.push_msg_to_server_asyn('client_test_result', test_res)
+        # return job_api_pb2.TestResponse(serialized_test_response=pickle.dumps(test_res))
 
 
     def setup_env(self):
-        logging.info(f"{YELLOW_BOLD}[{self.this_rank}] (EXECUTOR:{self.this_rank}){RESET} is setting up environ ...")
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}] (EXECUTOR:{self.this_rank}){RESET} is setting up environ ...")
 
         self.setup_seed(seed=self.this_rank)
 
@@ -126,7 +128,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         # Create communication channel between aggregator and worker
         # This channel serves control messages
 
-        logging.info(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Start to connect to {ps_ip}:{ps_port} for control plane communication ...")
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Start to connect to {ps_ip}:{ps_port} for control plane communication ...")
 
         self.grpc_server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=30),
@@ -157,7 +159,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                 pass
 
         assert is_connected, 'Failed to connect to the aggregator'
-        logging.info(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Successfully connect to the aggregator")
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Successfully connect to the aggregator")
 
         self.server_event_queue = eval('self.control_manager.get_server_event_que'+str(self.this_rank)+'()')
         self.client_event_queue = self.control_manager.get_client_event()
@@ -177,7 +179,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         if self.task == "rl":
             return train_dataset, test_dataset
         # load data partitioner (entire_train_data)
-        logging.info(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner starts ...")
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner starts ...")
 
         training_sets = DataPartitioner(data=train_dataset, numOfClass=self.args.num_class)
         training_sets.partition_data_helper(num_clients=self.args.total_worker, data_map_file=self.args.data_map_file)
@@ -185,7 +187,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         testing_sets = DataPartitioner(data=test_dataset, numOfClass=self.args.num_class, isTest=True)
         testing_sets.partition_data_helper(num_clients=self.num_executors)
 
-        logging.info(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner completes ...")
+        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner completes ...")
 
 
         if self.task == 'nlp':
@@ -232,6 +234,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
         # Dump latest model to disk
         with open(self.temp_model_path, 'wb') as model_out:
+            logging.debug(f'[{self.this_rank}] >>> Dump the model to the {self.temp_model_path}')
             pickle.dump(self.model, model_out)
 
 
@@ -239,6 +242,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         # load last global model
         # try:
         with open(self.temp_model_path, 'rb') as model_in:
+            logging.debug(f'[{self.this_rank}] >>> Open model in {self.temp_model_path}')
             model = pickle.load(model_in)
             return model
         # except OSError as e:
@@ -275,6 +279,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             client = RLClient(conf)
             train_res = client.train(client_data=client_data, model=client_model, conf=conf)
         else:
+            logging.debug(f'{RED_BOLD}[{self.this_rank}] Preparing train dataset for [{clientId}]{RESET}')
             client_data = select_dataset(clientId, self.training_sets, batch_size=conf.batch_size, collate_fn=self.collate_fn)
 
             client = self.get_client_trainer(conf)
@@ -294,6 +299,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             test_res = client.test(args, self.this_rank, self.model, device=device)
             _, _, _, testResults = test_res
         else:
+            logging.debug(f'{RED_BOLD}[{self.this_rank}] Prepare test dataset for [{self.this_rank}]{RESET}')
             data_loader = select_dataset(self.this_rank, self.testing_sets, batch_size=args.test_bsz, isTest=True, collate_fn=self.collate_fn)
 
             if self.task == 'voice':
@@ -304,11 +310,11 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             test_res = test_model(self.this_rank, self.model, data_loader, device=device, criterion=criterion, tokenizer=tokenizer)
 
             test_loss, acc, acc_5, testResults = test_res
-            logging.info("{YELLOW_BOLD}[{}]{RESET} After aggregation epoch {}, CumulTime {}, eval_time {}, test_loss {}, test_accuracy {:.2f}%, test_5_accuracy {:.2f}% \n"
-                        .format(self.this_rank, self.epoch, round(time.time() - self.start_run_time, 4), round(time.time() - evalStart, 4), test_loss, acc*100., acc_5*100.))
+            logging.debug("{}[{}]{} After aggregation epoch {}, CumulTime {}, eval_time {}, test_loss {}, test_accuracy {:.2f}%, test_5_accuracy {:.2f}%"
+                        .format(YELLOW_BOLD, self.this_rank, RESET, self.epoch, round(time.time() - self.start_run_time, 4), round(time.time() - evalStart, 4), test_loss, acc*100., acc_5*100.))
 
         gc.collect()
-
+        testResults['clientId'] = self.this_rank
         return testResults
 
 
@@ -318,7 +324,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
         while True:
             if self.received_stop_request:
-                logging.info(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Terminating {YELLOW_BOLD}(Executor {self.this_rank}){RESET} ...")
+                logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Terminating {YELLOW_BOLD}(Executor {self.this_rank}){RESET} ...")
                 self.grpc_server.stop(0)
                 break
 
@@ -326,7 +332,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                 event_dict = self.server_event_queue.get()
                 event_msg = event_dict['event']
 
-                logging.info(f"{YELLOW_BOLD}[{self.this_rank}] Executor {self.this_rank}{RESET}: Received (Event:{event_msg.upper()}) from aggregator")
+                logging.debug(f"{YELLOW_BOLD}[{self.this_rank}] Executor {self.this_rank}{RESET}: Received (Event:{event_msg.upper()}) from aggregator")
 
                 # initiate each training round
                 if event_msg == 'train':
@@ -336,6 +342,9 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                     self.push_msg_to_server('train_nowait', None)
                     # model updates may be time-consuming, thus we apply asyn push for better communication-computation overlaps
                     self.push_msg_to_server_asyn(event_msg, train_res)
+                elif event_msg == 'client_test_result':
+                    test_res = self.testing_handler(args=self.args)
+                    self.push_msg_to_server_asyn(event_msg, test_res)
 
                 else:
                     logging.error("Unknown message types!")

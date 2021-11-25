@@ -27,6 +27,11 @@ from torchvision import datasets, transforms
 import torchvision.models as tormodels
 from torch.utils.data.sampler import WeightedRandomSampler
 
+YELLOW_BOLD = "\033[1;93m"
+CYAN_BOLD = "\033[1;36m"
+RED_BOLD = "\033[1;91m"
+RESET = "\033[0m"
+
 tokenizer = None
 if args.task == 'nlp' or args.task == 'text_clf':
     from utils.nlp import mask_tokens, load_and_cache_examples

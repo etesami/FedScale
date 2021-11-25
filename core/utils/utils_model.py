@@ -3,6 +3,11 @@
 import math
 import random
 
+YELLOW_BOLD = "\033[1;93m"
+CYAN_BOLD = "\033[1;36m"
+RED_BOLD = "\033[1;91m"
+RESET = "\033[0m"
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -356,8 +361,19 @@ def test_model(rank, model, test_data, device='cpu', criterion=nn.NLLLoss(), tok
         # precision, recall, f1, sup = precision_recall_fscore_support(targets_list, preds, average='samples')
         top_5, correct, test_len = cal_accuracy(targets_list, preds)
 
-    logging.info('Rank {}: Test set: Average loss: {}, Top-1 Accuracy: {}/{} ({}), Top-5 Accuracy: {}'
-          .format(rank, test_loss, correct, len(test_data.dataset), acc, acc_5))
+    # logging.info('[U] Rank {}: Test set: Average loss: {}, Top-1 Accuracy: {}/{} ({}), Top-5 Accuracy: {}'
+    logging.info('{}[U] [{}]: Avg. loss: {}, Top-1 Acc: {}{}%{} ({}/{}), Top-5 Acc: {}{}%{}'
+          .format(
+              YELLOW_BOLD,
+              rank, 
+              round(test_loss, 4), 
+              CYAN_BOLD,
+              round(acc * 100, 2),
+              YELLOW_BOLD,
+              correct, len(test_data.dataset), 
+              CYAN_BOLD,
+              round(acc_5 * 100, 2),
+              RESET))
 
     testRes = {'top_1':correct, 'top_5':top_5, 'test_loss':sum_loss, 'test_len':test_len}
 

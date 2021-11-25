@@ -1,4 +1,5 @@
 import argparse
+from logging import INFO
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--job_name', type=str, default='kuiper_job')
@@ -70,6 +71,7 @@ parser.add_argument('--cut_off_util', type=float, default=0.05) # 95 percentile
 
 parser.add_argument('--gradient_policy', type=str, default=None)
 parser.add_argument('--logging_step', type=int, default=10)
+parser.add_argument('--logging_level', type=str, default=INFO)
 
 # for yogi
 parser.add_argument('--yogi_eta', type=float, default=3e-3)

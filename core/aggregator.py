@@ -157,9 +157,11 @@ class Aggregator(object):
         dummy_que = {executorId:Queue() for executorId in executors}
         # create multiple queue for each aggregator_executor pair
         for executorId in executors:
+            logging.debug(f'[A] -- Registering get_server_event_que{executorId}')
             BaseManager.register('get_server_event_que'+str(executorId), callable=lambda: dummy_que[executorId])
 
         dummy_client_que = Queue()
+        logging.debug(f'[A] -- Registering get_client_event')
         BaseManager.register('get_client_event', callable=lambda: dummy_client_que)
 
         self.control_manager = BaseManager(address=(ps_ip, ps_port), authkey=b'FLPerf')
@@ -237,7 +239,9 @@ class Aggregator(object):
 
                 clientId += 1
 
-            logging.info("[A] Info of all feasible clients {}".format(self.client_manager.getDataInfo()))
+            # logging.info("[A] Feasible clients {}".format(self.client_manager.getDataInfo()))
+            for ii, jj in self.client_manager.getDataInfo().items():
+                logging.debug("[A] {}: {}".format(ii, jj))
 
             # start to sample clients
             self.round_completion_handler()
@@ -351,20 +355,21 @@ class Aggregator(object):
                                     success=False)
 
         avg_loss = sum(self.loss_accumulator)/max(1, len(self.loss_accumulator))
-        logging.info(f"[A] {CYAN_BOLD}Wall clock: {round(self.global_virtual_clock)} s, Epoch: {self.epoch}{RESET}")
+        logging.info(f"[A] {CYAN_BOLD}Epoch: [{self.epoch}], Wall clock: {round(self.global_virtual_clock)} sec{RESET}")
         
-        logging.info(f"[A] Planned participants: " + \
+        logging.debug(f"[A] -- Planned participants: " + \
             f"{len(self.sampled_participants)}, Succeed participants: {len(self.stats_util_accumulator)}")
         
-        logging.info(f"[A] Training loss: {avg_loss}")
+        logging.info(f"[A] -- Training loss: {avg_loss}")
 
         # update select participants
         self.sampled_participants = self.select_participants(select_num_participants=self.args.total_worker, overcommitment=self.args.overcommitment)
         clientsToRun, round_stragglers, virtual_client_clock, round_duration = self.tictak_client_tasks(self.sampled_participants, self.args.total_worker)
 
-        logging.info(f"[A] Selected participants to run: {clientsToRun}")
-        for ii, jj in virtual_client_clock.items():
-            logging.debug(f"[A] -> [{ii:<5}]: {jj}")
+        # logging.info(f"[A] -- Selected participants to run in next round:")
+        logging.info(f"[A] -- Next clinets: {clientsToRun}")
+        # for ii, jj in virtual_client_clock.items():
+        #     logging.debug(f"[A] --> [{ii:<5}]: {jj}")
 
         # Issue requests to the resource manager; Tasks ordered by the completion time
         self.resource_manager.register_tasks(clientsToRun)
@@ -395,6 +400,7 @@ class Aggregator(object):
         # Have collected all testing results
         if len(self.test_result_accumulator) == len(self.executors):
             accumulator = self.test_result_accumulator[0]
+            logging.debug(f'[A] ---- Test results key: {accumulator.keys()}')
             for i in range(1, len(self.test_result_accumulator)):
                 if self.args.task == "detection":
                     for key in accumulator:
@@ -421,11 +427,26 @@ class Aggregator(object):
                     'test_len': accumulator['test_len']
                     }
 
-
-            logging.info("[A] FL Testing in epoch: {}, virtual_clock: {}, top_1: {} %, top_5: {} %, test loss: {:.4f}, test len: {}"
-                    .format(self.epoch, self.global_virtual_clock, self.testing_history['perf'][self.epoch]['top_1'],
-                    self.testing_history['perf'][self.epoch]['top_5'], self.testing_history['perf'][self.epoch]['loss'],
-                    self.testing_history['perf'][self.epoch]['test_len']))
+            # '{}[U] [{}]: Avg. loss: {}, Top-1 Acc: {}{}%{} ({}/{}), Top-5 Acc: {}{}%{}'
+            # logging.info("{}[A] [A] E: [{}], Virtual Clock: {}, top_1: {}{}%{}, top_5: {}{}%{}, Loss: {}, Test Len: {}{}"
+            logging.info("{}[{}] [{}]: Avg. loss: {}{}{}, Top-1 Acc: {}{}%{}, Top-5 Acc: {}{}%{}, Len ({}), Virtual Clock: {}"
+                    .format(
+                        YELLOW_BOLD,
+                        results['clientId'],
+                        self.epoch, 
+                        CYAN_BOLD,
+                        round(self.testing_history['perf'][self.epoch]['loss'], 4),
+                        YELLOW_BOLD,
+                        CYAN_BOLD,
+                        round(self.testing_history['perf'][self.epoch]['top_1'], 2),
+                        YELLOW_BOLD,
+                        CYAN_BOLD,
+                        round(self.testing_history['perf'][self.epoch]['top_5'], 2),
+                        YELLOW_BOLD, 
+                        self.testing_history['perf'][self.epoch]['test_len'],
+                        round(self.global_virtual_clock, 4), 
+                        RESET
+                        ))
 
             # Dump the testing result
             with open(os.path.join(logDir, 'testing_perf'), 'wb') as fout:
@@ -443,7 +464,7 @@ class Aggregator(object):
         logging.debug("[A] Start monitoring events ...")
         start_time = time.time()
         SLEEP_TIME = 15
-        logging.debug(f"{RED_BOLD}[A] Sleeps for {SLEEP_TIME} secs ...{RESET}")
+        logging.info(f"[A] Sleeps for {RED_BOLD}{SLEEP_TIME}{RESET} secs ...")
         time.sleep(SLEEP_TIME)
 
         while time.time() - start_time < 120:
@@ -475,13 +496,14 @@ class Aggregator(object):
                         buffer.seek(0)
                         serialized_tensors[param] = buffer.read()
 
-                    update_model_request = job_api_pb2.UpdateModelRequest()
+                    # update_model_request = job_api_pb2.UpdateModelRequest()
                     for executorId in self.executors:
                         _ = self.executors.get_stub(executorId).UpdateModel(
                             job_api_pb2.UpdateModelRequest(serialized_tensor=serialized_tensors[param])
                                 for param in self.model.parameters())
 
                 elif event_msg == 'start_round':
+                    logging.info(f'[A] -- Starting to train clients...')
                     for executorId in self.executors:
                         next_clientId = self.resource_manager.get_next_task()
 
@@ -504,8 +526,12 @@ class Aggregator(object):
 
                 elif event_msg == 'test':
                     for executorId in self.executors:
-                        response = self.executors.get_stub(executorId).Test(job_api_pb2.TestRequest())
-                        self.testing_completion_handler(pickle.loads(response.serialized_test_response))
+                        self.executors.get_stub(executorId).Test(job_api_pb2.TestRequest())
+                        runtime_profile = {'event': 'client_test_result'}
+                        logging.debug(f'[A] --- Sending (client_test_result) to (Executor {executorId})')
+                        self.server_event_queue[executorId].put(runtime_profile)
+                        # response = self.executors.get_stub(executorId).Test(job_api_pb2.TestRequest())
+                        # self.testing_completion_handler(pickle.loads(response.serialized_test_response))
 
             elif not self.client_event_queue.empty():
 
@@ -513,26 +539,33 @@ class Aggregator(object):
                 event_msg, executorId, results = event_dict['event'], event_dict['executorId'], event_dict['return']
 
                 if event_msg != 'train_nowait':
-                    logging.info(f"[A] Round {self.epoch}: Receive (Event:{event_msg.upper()}) from {YELLOW_BOLD}(Executor:{executorId}){RESET}")
+                    logging.debug(f"[A] Epoch {self.epoch}: Receive (Event:{event_msg.upper()}) from {YELLOW_BOLD}(Executor:{executorId}){RESET}")
 
                 # collect training returns from the executor
                 if event_msg == 'train_nowait':
+                    logging.debug(f'[A] --- Received ({event_msg}) from (Executor {executorId})')
                     # pop a new client to run
                     next_clientId = self.resource_manager.get_next_task()
 
                     if next_clientId is not None:
                         config = self.get_client_conf(next_clientId)
                         runtime_profile = {'event': 'train', 'clientId':next_clientId, 'conf': config}
+                        logging.debug(f'[A] --- Sending (train) to (Executor {next_clientId})')
                         self.server_event_queue[executorId].put(runtime_profile)
 
 
                 elif event_msg == 'train':
                     # push training results
+                    # logging.debug(f'[A] *** Received ({event_msg}) from (Executor {executorId})')
                     self.client_completion_handler(results)
 
                     if len(self.stats_util_accumulator) == self.tasks_round:
+                        logging.debug("[A] All result were fetched! Ready for complete the round...")
                         self.round_completion_handler()
 
+                elif event_msg == 'client_test_result':
+                    # logging.debug(f'[A] *** Received ({event_msg}) from (Executor {executorId})')
+                    self.testing_completion_handler(results)
                 else:
                     logging.error("Unknown message types!")
 
@@ -543,7 +576,7 @@ class Aggregator(object):
 
 
     def stop(self):
-        logging.info(f"[A] Terminating the aggregator ...")
+        logging.info(f"{RED_BOLD}[A] Terminating the aggregator ...{RESET}")
         time.sleep(5)
         self.control_manager.shutdown()
 
