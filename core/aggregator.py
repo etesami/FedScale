@@ -526,9 +526,9 @@ class Aggregator(object):
 
                 elif event_msg == 'test':
                     for executorId in self.executors:
+                        logging.debug(f'[A] --- Sending (client_test_result) to (Executor {executorId})')
                         self.executors.get_stub(executorId).Test(job_api_pb2.TestRequest())
                         runtime_profile = {'event': 'client_test_result'}
-                        logging.debug(f'[A] --- Sending (client_test_result) to (Executor {executorId})')
                         self.server_event_queue[executorId].put(runtime_profile)
                         # response = self.executors.get_stub(executorId).Test(job_api_pb2.TestRequest())
                         # self.testing_completion_handler(pickle.loads(response.serialized_test_response))
@@ -568,6 +568,7 @@ class Aggregator(object):
                     self.testing_completion_handler(results)
                 else:
                     logging.error("Unknown message types!")
+                    logging.error(f"{event_msg}")
 
             # execute every 100 ms
             time.sleep(0.1)

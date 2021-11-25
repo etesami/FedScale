@@ -347,7 +347,8 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                     self.push_msg_to_server_asyn(event_msg, test_res)
 
                 else:
-                    logging.error("Unknown message types!")
+                    logging.error(f"[{self.this_rank}] Unknown message types!")
+                    logging.error(f"[{self.this_rank}] {event_msg}")
 
             time.sleep(0.3)
 
