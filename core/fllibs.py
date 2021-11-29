@@ -82,7 +82,7 @@ CYAN_BOLD = "\033[1;36m"
 RESET = "\033[0m"
 
 outputClass = {'Mnist': 10, 'cifar10': 10, "imagenet": 1000, 'emnist': 47,'amazon':5,
-                'openImg': 596, 'google_speech': 35, 'femnist': 62, 'yelp': 5, 'inaturalist' : 1010
+                'openImg': 596, 'google_speech': 35, 'femnist': 62, 'femnist_leaf': 62, 'yelp': 5, 'inaturalist' : 1010
             }
 
 def init_model():
@@ -170,6 +170,9 @@ def init_model():
         elif args.model == 'svm':
             from utils.models import LinearSVM
             model = LinearSVM(args.input_dim, outputClass[args.data_set])
+        elif args.model == 'FLNet':
+            from utils.models import FLNet
+            model = FLNet()
         else:
             model = tormodels.__dict__[args.model](num_classes=outputClass[args.data_set])
 
@@ -228,6 +231,9 @@ def init_dataset():
             train_transform, test_transform = get_data_transform('mnist')
             train_dataset = FEMNIST(args.data_dir, dataset='train', transform=train_transform)
             test_dataset = FEMNIST(args.data_dir, dataset='test', transform=test_transform)
+        
+        elif args.data_set == 'femnist_leaf':
+            return None, None, init_dataset_metadata()
 
         elif args.data_set == 'openImg':
             from utils.openimage import OpenImage
@@ -293,4 +299,15 @@ def init_dataset():
             print('DataSet must be {}!'.format(['Mnist', 'Cifar', 'openImg', 'blog', 'stackoverflow', 'speech', 'yelp']))
             sys.exit(-1)
 
-    return train_dataset, test_dataset
+    dataset_metadata = None
+    return train_dataset, test_dataset, dataset_metadata
+
+def init_dataset_metadata():
+    if args.data_set == 'femnist_leaf':
+        with open(args.data_map_file, 'rb') as ff:
+            dataset_metadata = pickle.load(ff)
+        logging.debug(f'[L] FEMNIST metadata is loaded. Total users: ({len(dataset_metadata)})')
+        return dataset_metadata
+    else:
+        logging.error('[L] This function is used to load metadata for femnist (leaf) only.')
+        sys.exit(-1)

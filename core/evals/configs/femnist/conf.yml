@@ -121,10 +121,14 @@ job_conf:
     - job_name: femnist
     - log_path: $HOME/FedScale/core/evals
     - logging_level: DEBUG
-    - total_worker: 4 # This is the number of clients (for training)
-    - data_set: femnist
-    - data_dir: $HOME/FedScale/dataset/data/femnist
-    - data_map_file: $HOME/FedScale/dataset/data/femnist/client_data_mapping/train.csv
+    - total_worker: 2 # This is the number of clients (for training)
+    # - data_set: femnist
+    - data_set: femnist_leaf
+    - data_dir: $HOME/FedScale/dataset/data/FEMNIST
+    # - data_map_file: $HOME/FedScale/dataset/data/femnist/client_data_mapping/train.csv
+    - data_map_file: $HOME/FedScale/dataset/data/FEMNIST/train/users-train.pkl
+    - load_data_map_file: True
+    - model: FLNet
     # - gradient_policy: yogi
     - eval_interval: 2
     - epochs: 3

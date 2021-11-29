@@ -11,6 +11,8 @@ import job_api_pb2
 import io
 import torch
 import pickle
+import json
+from utils.femnist_leaf import FEMNIST_LEAF
 
 
 MAX_MESSAGE_LENGTH = 50000000
@@ -28,7 +30,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         self.this_rank = args.this_rank
 
         # ======== model and data ========
-        self.model = self.training_sets = self.test_dataset = None
+        self.model = self.training_sets = self.test_dataset = self.dataset_metadata = None
         self.temp_model_path = os.path.join(logDir, 'model_'+str(args.this_rank)+'.pth.tar')
 
         # ======== channels ========
@@ -76,7 +78,8 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         """
         logging.debug(f'[{self.this_rank}] Received GRPC ReportExecutorInfo request')
         response = job_api_pb2.ReportExecutorInfoResponse()
-        response.training_set_size.extend(self.training_sets.getSize()['size'])
+        if self.training_sets is not None:
+            response.training_set_size.extend(self.training_sets.getSize()['size'])
         return response
 
 
@@ -175,19 +178,22 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
     def init_data(self):
         """Return the training and testing dataset"""
-        train_dataset, test_dataset = init_dataset()
+        train_dataset, test_dataset, dataset_metadata = init_dataset()
         if self.task == "rl":
             return train_dataset, test_dataset
-        # load data partitioner (entire_train_data)
-        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner starts ...")
+        
+        training_sets, testing_sets = None, None
+        if train_dataset is not None:
+            # load data partitioner (entire_train_data)
+            logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner starts ...")
 
-        training_sets = DataPartitioner(data=train_dataset, numOfClass=self.args.num_class)
-        training_sets.partition_data_helper(num_clients=self.args.total_worker, data_map_file=self.args.data_map_file)
+            training_sets = DataPartitioner(data=train_dataset, numOfClass=self.args.num_class)
+            training_sets.partition_data_helper(num_clients=self.args.total_worker, data_map_file=self.args.data_map_file)
 
-        testing_sets = DataPartitioner(data=test_dataset, numOfClass=self.args.num_class, isTest=True)
-        testing_sets.partition_data_helper(num_clients=self.num_executors)
+            testing_sets = DataPartitioner(data=test_dataset, numOfClass=self.args.num_class, isTest=True)
+            testing_sets.partition_data_helper(num_clients=self.num_executors)
 
-        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner completes ...")
+            logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner completes ...")
 
 
         if self.task == 'nlp':
@@ -195,14 +201,14 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         elif self.task == 'voice':
             self.collate_fn = voice_collate_fn
 
-        return training_sets, testing_sets
+        return training_sets, testing_sets, dataset_metadata
 
 
     def run(self):
         self.setup_env()
         self.model = self.init_model()
         self.model = self.model.to(device=self.device)
-        self.training_sets, self.testing_sets = self.init_data()
+        self.training_sets, self.testing_sets, self.dataset_metadata = self.init_data()
         self.setup_communication()
         self.event_monitor()
 
@@ -271,6 +277,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
 
         # load last global model
         client_model = self.load_global_model()
+        client_data = None
 
         conf.clientId, conf.device = clientId, self.device
         conf.tokenizer = tokenizer
@@ -280,7 +287,22 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             train_res = client.train(client_data=client_data, model=client_model, conf=conf)
         else:
             logging.debug(f'{RED_BOLD}[{self.this_rank}] Preparing train dataset for [{clientId}]{RESET}')
-            client_data = select_dataset(clientId, self.training_sets, batch_size=conf.batch_size, collate_fn=self.collate_fn)
+            
+            if self.args.load_data_map_file:
+                train_transform, test_transform = get_data_transform('femnist_leaf')
+                data_file_name = self.dataset_metadata[clientId]['data_source_file']
+                
+                cdata = None
+                with open(os.path.join(self.args.data_dir, 'train', data_file_name), 'r') as inf:
+                    cdata = json.load(inf)
+                metadata = self.dataset_metadata[clientId]
+                train_data = cdata['user_data'][metadata['user_id']]['x']
+                train_target = cdata['user_data'][metadata['user_id']]['y']
+                train_dataset = FEMNIST_LEAF(train_data, train_target, transform=train_transform)
+                client_data = DataLoader(
+                    train_dataset, batch_size=conf.batch_size, shuffle=True, pin_memory=True, num_workers=conf.num_loaders, drop_last=True)
+            else:
+                client_data = select_dataset(clientId, self.training_sets, batch_size=conf.batch_size, collate_fn=self.collate_fn)         
 
             client = self.get_client_trainer(conf)
             train_res = client.train(client_data=client_data, model=client_model, conf=conf)

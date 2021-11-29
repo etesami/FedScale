@@ -9,6 +9,7 @@ class clientManager(object):
     def __init__(self, mode, args, sample_seed=233):
         self.Clients = {}
         self.clientOnHosts = {}
+        self.client_data_mapping = None
         self.mode = mode
         self.filter_less = args.filter_less
         self.filter_more = args.filter_more
@@ -30,6 +31,13 @@ class clientManager(object):
         if args.device_avail_file is not None:
             with open(args.device_avail_file, 'rb') as fin:
                 self.user_trace = pickle.load(fin)
+                
+        if args.load_data_map_file:
+            logging.debug('[C] Loading data_map_file into the memory...')
+            # keys: data[mapped_id]: [clientId, data_size, data_source_file]
+            with open(args.data_map_file, 'rb') as ff:
+                self.client_data_mapping = pickle.load(ff)
+            logging.debug(f'[L] FEMNIST metadata is loaded. Total users: ({len(self.client_data_mapping)})')
 
     def registerClient(self, hostId, clientId, size, speed, duration=1):
 

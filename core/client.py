@@ -8,6 +8,7 @@ from optimizer import ClientOptimizer
 
 YELLOW_BOLD = "\033[1;93m"
 CYAN_BOLD = "\033[1;36m"
+RED_BOLD = "\033[1;91m"
 RESET = "\033[0m"
 
 class Client(object):
