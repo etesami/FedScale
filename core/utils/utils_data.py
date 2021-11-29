@@ -22,6 +22,15 @@ def get_data_transform(data: str):
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
         ])
+    elif data == 'femnist_leaf':
+        train_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.9638,), (0.1590,))
+        ])
+        test_transform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.9638,), (0.1590,))
+        ])
 
     elif data == 'cifar':
         train_transform = transforms.Compose([

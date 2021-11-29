@@ -26,7 +26,7 @@ elif [[ ${args[--data]} == 'true' ]]; then
         AGENT="agent${ii}"
         green "Copying data to agent$ii ..."
         (rsync -ar \
-            --delete --info=progress2 ~/FedScale/dataset ${AGENT}:~/FedScale &)
+            --delete --info=progress2 ~/FedScale/dataset/data/FEMNIST ${AGENT}:~/FedScale/dataset/data/ &)
     done
 fi
 

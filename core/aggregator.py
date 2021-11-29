@@ -9,6 +9,7 @@ import job_api_pb2
 import io
 import torch
 import pickle
+import traceback
 
 
 MAX_MESSAGE_LENGTH = 50000000
@@ -226,22 +227,32 @@ class Aggregator(object):
 
         if self.registered_executor_info == len(self.executors):
 
-            clientId = 1
 
-            for index, _size in enumerate(info['size']):
-                # since the worker rankId starts from 1, we also configure the initial dataId as 1
-                mapped_id = clientId%len(self.client_profiles) if len(self.client_profiles) > 0 else 1
-                systemProfile = self.client_profiles.get(mapped_id, {'computation': 1.0, 'communication':1.0})
+            if len(info['size']) > 0:
+                clientId = 1
+                # Each executor loads the data entierly and then performs data partitioning
+                for index, _size in enumerate(info['size']):
+                    # since the worker rankId starts from 1, we also configure the initial dataId as 1
+                    mapped_id = clientId%len(self.client_profiles) if len(self.client_profiles) > 0 else 1
+                    systemProfile = self.client_profiles.get(mapped_id, {'computation': 1.0, 'communication':1.0})
 
-                self.client_manager.registerClient(executorId, clientId, size=_size, speed=systemProfile)
-                self.client_manager.registerDuration(clientId, batch_size=self.args.batch_size,
-                    upload_epoch=self.args.local_steps, upload_size=self.model_update_size, download_size=self.model_update_size)
+                    self.client_manager.registerClient(executorId, clientId, size=_size, speed=systemProfile)
+                    self.client_manager.registerDuration(clientId, batch_size=self.args.batch_size,
+                        upload_epoch=self.args.local_steps, upload_size=self.model_update_size, download_size=self.model_update_size)
 
-                clientId += 1
+                    clientId += 1
+            else:
+                # Dataset is not loaded entierly (memory issue for a large dataset)
+                # and only metadata is loaded. 
+                for mapped_id, client_data in self.client_manager.client_data_mapping.items():
+                    systemProfile = self.client_profiles.get(mapped_id, {'computation': 1.0, 'communication':1.0})
+                    self.client_manager.registerClient(executorId, mapped_id, size=client_data['data_size'], speed=systemProfile)
+                    self.client_manager.registerDuration(mapped_id, batch_size=self.args.batch_size,
+                        upload_epoch=self.args.local_steps, upload_size=self.model_update_size, download_size=self.model_update_size)
 
             # logging.info("[A] Feasible clients {}".format(self.client_manager.getDataInfo()))
             for ii, jj in self.client_manager.getDataInfo().items():
-                logging.debug("[A] {}: {}".format(ii, jj))
+                logging.debug("[A] --> {}: {}".format(ii, jj))
 
             # start to sample clients
             self.round_completion_handler()
@@ -357,17 +368,17 @@ class Aggregator(object):
         avg_loss = sum(self.loss_accumulator)/max(1, len(self.loss_accumulator))
         logging.info(f"[A] {CYAN_BOLD}Epoch: [{self.epoch}], Wall clock: {round(self.global_virtual_clock)} sec{RESET}")
         
-        logging.debug(f"[A] -- Planned participants: " + \
+        logging.debug(f"[A] --> Planned participants: " + \
             f"{len(self.sampled_participants)}, Succeed participants: {len(self.stats_util_accumulator)}")
         
-        logging.info(f"[A] -- Training loss: {avg_loss}")
+        logging.info(f"[A] --> Training loss: {avg_loss}")
 
         # update select participants
         self.sampled_participants = self.select_participants(select_num_participants=self.args.total_worker, overcommitment=self.args.overcommitment)
         clientsToRun, round_stragglers, virtual_client_clock, round_duration = self.tictak_client_tasks(self.sampled_participants, self.args.total_worker)
 
         # logging.info(f"[A] -- Selected participants to run in next round:")
-        logging.info(f"[A] -- Next clinets: {clientsToRun}")
+        logging.info(f"[A] --> Next clinets: {clientsToRun}")
         # for ii, jj in virtual_client_clock.items():
         #     logging.debug(f"[A] --> [{ii:<5}]: {jj}")
 
@@ -463,7 +474,7 @@ class Aggregator(object):
     def event_monitor(self):
         logging.debug("[A] Start monitoring events ...")
         start_time = time.time()
-        SLEEP_TIME = 15
+        SLEEP_TIME = 7
         logging.info(f"[A] Sleeps for {RED_BOLD}{SLEEP_TIME}{RESET} secs ...")
         time.sleep(SLEEP_TIME)
 
@@ -478,7 +489,7 @@ class Aggregator(object):
                 
             except Exception as e:
                 logging.error("[A] Execption in receiving ReportExecutorInfoRequest")
-                logging.error("[A] {}".format(e))
+                logging.error("[A] {}".format(traceback.format_exc()))
                 logging.debug(f"{RED_BOLD}[A] Sleep for 15 secs and try again ...{RESET}")
                 self.executors.close_grpc_connection()
                 time.sleep(15)
