@@ -474,7 +474,7 @@ class Aggregator(object):
     def event_monitor(self):
         logging.debug("[A] Start monitoring events ...")
         start_time = time.time()
-        SLEEP_TIME = 7
+        SLEEP_TIME = 20
         logging.info(f"[A] Sleeps for {RED_BOLD}{SLEEP_TIME}{RESET} secs ...")
         time.sleep(SLEEP_TIME)
 

@@ -99,10 +99,17 @@ def process_cmd(yaml_file):
 
     print(f"Submitted job, please check your logs ({log_path}) for status")
 
-def terminate(job_name):
-
+def terminate(yaml_file):
+    yaml_conf = load_yaml_conf(yaml_file)
+    job_name = yaml_conf['job_conf'][0]['job_name']
     current_path = os.path.dirname(os.path.abspath(__file__))
     job_meta_path = os.path.join(current_path, job_name)
+    
+    setup_cmd = ''
+    if yaml_conf['setup_commands'] is not None:
+        setup_cmd += (yaml_conf['setup_commands'][0] + ' && ')
+        for item in yaml_conf['setup_commands'][1:]:
+            setup_cmd += (item + ' && ')
 
     if not os.path.isfile(job_meta_path):
         print(f"Fail to terminate {job_name}, as it does not exist")
@@ -114,7 +121,7 @@ def terminate(job_name):
         # os.system(f'scp shutdown.py {job_meta["user"]}{vm_ip}:~/')
         print(f"Shutting down job on {vm_ip}")
         with open(f"{job_name}_logging", 'a') as fout:
-            subprocess.Popen(f'ssh {job_meta["user"]}{vm_ip} "python {current_path}/shutdown.py {job_name}"',
+            subprocess.Popen(f'ssh {job_meta["user"]}{vm_ip} "{setup_cmd} python {current_path}/shutdown.py {job_name}"',
                             shell=True, stdout=fout, stderr=fout)
 
         # _ = os.system(f"ssh {job_meta['user']}{vm_ip} 'python {current_path}/shutdown.py {job_name}'")

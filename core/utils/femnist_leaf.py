@@ -14,10 +14,13 @@ class FEMNIST_LEAF(Dataset):
     def __getitem__(self, idx):
         img, target = self.data[idx], int(self.targets[idx])
             
-        if img is isinstance(img, np.ndarray):
+        if isinstance(img, np.ndarray):
             img = Image.fromarray(img.reshape(-1, 28))
         else:
             img = Image.fromarray(np.array(img).reshape(-1, 28))
+            
+        if not isinstance(target, np.ndarray):
+            target = np.array(target)
 
         if self.transform is not None:
             img = self.transform(img)
