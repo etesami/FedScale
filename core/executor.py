@@ -11,6 +11,7 @@ import job_api_pb2
 import io
 import torch
 import pickle
+from collections import defaultdict
 import json
 from utils.femnist_leaf import FEMNIST_LEAF
 
@@ -30,7 +31,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
         self.this_rank = args.this_rank
 
         # ======== model and data ========
-        self.model = self.training_sets = self.test_dataset = self.dataset_metadata = None
+        self.model = self.training_sets = self.testing_sets = self.dataset_metadata = None
         self.temp_model_path = os.path.join(logDir, 'model_'+str(args.this_rank)+'.pth.tar')
 
         # ======== channels ========
@@ -194,6 +195,50 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             testing_sets.partition_data_helper(num_clients=self.num_executors)
 
             logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Data partitioner completes ...")
+        else:
+            users_mapping = None
+            if os.path.exists(args.data_map_file):
+                with open(args.data_map_file, 'rb') as fin:
+                    users_mapping = pickle.load(fin) 
+                    
+            user_per_executor = int(np.floor(len(users_mapping) / args.num_executors))
+            # 35=3500/100
+            # (1-1)*35+1=1,  (1)*35=35
+            # (2-1)*35+1=36, (2)*35=70
+            # (3-1)*35+1=71, (3)*35=105
+            start_index = (self.this_rank - 1) * user_per_executor + 1
+            end_index = (self.this_rank) * user_per_executor
+            if self.this_rank == args.num_executors:
+                end_index += (len(users_mapping) - end_index)
+            
+            test_dataset_users_idx = defaultdict(lambda: [])
+            for idx, (mapped_id, user_data) in enumerate(users_mapping.items()):
+                # idx starts from zero
+                if (idx+1) >= start_index and (idx+1) <= end_index:
+                    test_dataset_users_idx[user_data['data_source_file'].replace('train', 'test')].append(user_data['user_id'])
+                if (idx+1) > end_index:
+                    break
+            logging.debug(f'[{self.this_rank}] Preparing test dataset')
+            logging.debug(f'[{self.this_rank}] -----> From {start_index} to {end_index}, total user: {end_index-start_index+1}')
+            logging.debug(f'[{self.this_rank}] -----> {user_per_executor} users\' data per executor')
+            
+            source_file_name, source_file = None, None
+            testing_data, testing_targets = [], []
+            for counter, (user_file, users_id) in enumerate(test_dataset_users_idx.items()):
+                file_path = os.path.join(self.args.data_dir, 'test', user_file)
+                cdata = None
+                with open(file_path, 'r') as fin:
+                    cdata = json.load(fin)['user_data']
+                    logging.debug(f'[{self.this_rank}] --> ({counter+1}/{len(test_dataset_users_idx)}) from test dataset loaded')
+                    logging.debug(f'[{self.this_rank}] --> Looking for {len(users_id)} users')
+                for uu in users_id:
+                    testing_data.extend([dd for dd in cdata[uu]['x']])
+                    testing_targets.extend(cdata[uu]['y'])
+            
+            train_transform, test_transform = get_data_transform('femnist_leaf')
+            testing_sets = FEMNIST_LEAF(testing_data, testing_targets, transform=test_transform)
+                    
+            logging.debug(f'[{self.this_rank}] Number of test samples: {len(testing_sets)}')
 
 
         if self.task == 'nlp':
@@ -322,7 +367,11 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
             _, _, _, testResults = test_res
         else:
             logging.debug(f'{RED_BOLD}[{self.this_rank}] Prepare test dataset for [{self.this_rank}]{RESET}')
-            data_loader = select_dataset(self.this_rank, self.testing_sets, batch_size=args.test_bsz, isTest=True, collate_fn=self.collate_fn)
+            
+            if args.load_data_map_file:
+                data_loader = DataLoader(self.testing_sets, batch_size=args.test_bsz, shuffle=True, pin_memory=True, drop_last=True)
+            else:
+                data_loader = select_dataset(self.this_rank, self.testing_sets, batch_size=args.test_bsz, isTest=True, collate_fn=self.collate_fn)
 
             if self.task == 'voice':
                 criterion = CTCLoss(reduction='mean').to(device=device)
