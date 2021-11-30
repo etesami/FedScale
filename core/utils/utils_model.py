@@ -361,7 +361,7 @@ def test_model(rank, model, test_data, device='cpu', criterion=nn.NLLLoss(), tok
         top_5, correct, test_len = cal_accuracy(targets_list, preds)
 
     # logging.info('[U] Rank {}: Test set: Average loss: {}, Top-1 Accuracy: {}/{} ({}), Top-5 Accuracy: {}'
-    logging.info('{}[U] [{}]: Avg. loss: {}, Top-1 Acc: {}{}%{} ({}/{}), Top-5 Acc: {}{}%{}'
+    logging.debug('{}[U] [{}]: Avg. loss: {}, Top-1 Acc: {}{}%{} ({}/{}), Top-5 Acc: {}{}%{}'
           .format(
               YELLOW_BOLD,
               rank, 

@@ -67,8 +67,9 @@ def process_cmd(yaml_file):
         pass
 
     print(f"Starting aggregator on {ps_ip}...")
+    setup_cmd_aggregator = setup_cmd + 'source ~/token.info && '
     with open(f"{job_name}_logging", 'a') as fout:
-        subprocess.Popen(f'ssh -oStrictHostKeyChecking=no {submit_user}{ps_ip} "{setup_cmd} {ps_cmd}"',
+        subprocess.Popen(f'ssh -oStrictHostKeyChecking=no {submit_user}{ps_ip} "{setup_cmd_aggregator} {ps_cmd}"',
                         shell=True, stdout=fout, stderr=fout)
 
     time.sleep(3)

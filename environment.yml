@@ -31,3 +31,4 @@ dependencies:
     - sentencepiece
     - grpcio
     - gym
+    - neptune-client

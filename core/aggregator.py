@@ -7,6 +7,7 @@ import grpc
 import job_api_pb2_grpc
 import job_api_pb2
 import io
+import neptune.new as neptune
 import torch
 import pickle
 import traceback
@@ -118,6 +119,10 @@ class Aggregator(object):
         self.test_result_accumulator = []
         self.testing_history = {'data_set': args.data_set, 'model': args.model, 'sample_mode': args.sample_mode,
                         'gradient_policy': args.gradient_policy, 'task': args.task, 'perf': collections.OrderedDict()}
+        
+        
+        self.neptune_run = neptune.init(project="ehsan/FLProject")
+        self.neptune_run["parameters"] = locals()
         
         # ======== Task specific ============
         self.imdb = None           # object detection
@@ -372,6 +377,7 @@ class Aggregator(object):
             f"{len(self.sampled_participants)}, Succeed participants: {len(self.stats_util_accumulator)}")
         
         logging.info(f"[A] --> Training loss: {avg_loss}")
+        self.neptune_run['train/avg_loss'].log(avg_loss)
 
         # update select participants
         self.sampled_participants = self.select_participants(select_num_participants=self.args.total_worker, overcommitment=self.args.overcommitment)
@@ -458,6 +464,10 @@ class Aggregator(object):
                         round(self.global_virtual_clock, 4), 
                         RESET
                         ))
+            
+            self.neptune_run["test/accuracy/top_1"].log(self.testing_history['perf'][self.epoch]['top_1'])
+            self.neptune_run["test/accuracy/top_5"].log(self.testing_history['perf'][self.epoch]['top_5'])
+            self.neptune_run["test/loss"].log(self.testing_history['perf'][self.epoch]['loss'])
 
             # Dump the testing result
             with open(os.path.join(logDir, 'testing_perf'), 'wb') as fout:
@@ -472,9 +482,9 @@ class Aggregator(object):
         return conf
 
     def event_monitor(self):
-        logging.debug("[A] Start monitoring events ...")
+        logging.info("[A] Start monitoring events ...")
         start_time = time.time()
-        SLEEP_TIME = 20
+        SLEEP_TIME = 30
         logging.info(f"[A] Sleeps for {RED_BOLD}{SLEEP_TIME}{RESET} secs ...")
         time.sleep(SLEEP_TIME)
 
@@ -514,7 +524,7 @@ class Aggregator(object):
                                 for param in self.model.parameters())
 
                 elif event_msg == 'start_round':
-                    logging.info(f'[A] -- Starting to train clients...')
+                    logging.info(f'[A] Starting to train new clients...')
                     for executorId in self.executors:
                         next_clientId = self.resource_manager.get_next_task()
 
@@ -588,6 +598,7 @@ class Aggregator(object):
 
 
     def stop(self):
+        self.neptune_run.stop()
         logging.info(f"{RED_BOLD}[A] Terminating the aggregator ...{RESET}")
         time.sleep(5)
         self.control_manager.shutdown()

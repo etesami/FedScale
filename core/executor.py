@@ -163,7 +163,7 @@ class Executor(job_api_pb2_grpc.JobServiceServicer):
                 pass
 
         assert is_connected, 'Failed to connect to the aggregator'
-        logging.debug(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Successfully connect to the aggregator")
+        logging.info(f"{YELLOW_BOLD}[{self.this_rank}]{RESET} Successfully connect to the aggregator")
 
         self.server_event_queue = eval('self.control_manager.get_server_event_que'+str(self.this_rank)+'()')
         self.client_event_queue = self.control_manager.get_client_event()
